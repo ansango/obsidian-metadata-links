@@ -28646,7 +28646,15 @@ var MetadataLinks = class extends import_obsidian.Plugin {
         new import_obsidian.Notice(`Found ${data.length} metadata links`);
         const previousSelection = text + "\n\n";
         const plain = data.map(({ title, description, url }) => `- [${title}](${url}): ${description}`).join("\n\n");
-        const html = data.map(({ title, description, image, url }) => `<div class=link-card-container><a class=link-card href=${url} target=_blank><div class=link-image-container><div class=link-image style=background-image:url(${image})></div></div><div class=link-card-text><h5 class=link-card-title>${(title || "").replace(/\s{3,}/g, " ").trim()}</h5><p class=link-card-description>${(description || "").replace(/\s{3,}/g, " ").trim()}<p class=link-href>${url}</div></a></div>`).join("\n\n");
+        const html = data.map(
+          ({
+            title,
+            description,
+            image,
+            url
+          }) => `<div style="position: relative;"><a href="${url}" target="_blank" style="border: 1px solid var(--background-modifier-border); margin: 20px 0; border-radius: 3px; width: 100%; display: flex; text-decoration: none !important; background-color: var(--background-primary);"><div style="height: 100px; width: 35%; min-width: 120px; overflow: hidden; border-right: 1px solid var(--background-modifier-border);"><div style="background-image: url(${image}); background-position: center center; background-size: cover; background-repeat: no-repeat; padding-bottom: 100px; background-color: var(--background-secondary);"></div></div><div style="padding: 4px; width: 75%; overflow: hidden;"><h5 style="font-family: sans-serif; font-size: 16px; margin: 0 0 4px 0; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-normal);">${(title || "").replace(/\s{3,}/g, " ").trim()}</h5><p style="font-family: sans-serif; font-size: 14px; margin: 0; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${(description || "").replace(/\s{3,}/g, " ").trim()}</p><p style="font-family: sans-serif; font-size: 14px; margin: 0; color: var(--text-faint); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;">${url}</p></div></a></div>
+`
+        ).join("\n\n");
         editor.replaceSelection(previousSelection + (render === "html" ? html : plain) + "\n\n");
         new import_obsidian.Notice("Converted URLs to metadata links");
       } catch (error) {
