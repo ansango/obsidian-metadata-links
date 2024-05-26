@@ -1,26 +1,44 @@
-import { App, Editor, MarkdownView, Notice, Plugin, PluginSettingTab, Setting, requestUrl } from 'obsidian';
-import metadata from "metadata-scraper";
+import {
+	App,
+	Editor,
+	MarkdownView,
+	Notice,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+} from "obsidian";
+
+import {
+	generateHtml,
+	generateMarkDown,
+	getMetadataUrls,
+	getUrls,
+	isTextSelection,
+	undoHtml,
+	undoMarkdown,
+} from "utils";
 // Remember to rename these classes and interfaces!
 
 interface MetadataLinksSettings {
 	render: string;
+	replaceOnRender: boolean;
 }
 
 const DEFAULT_SETTINGS: MetadataLinksSettings = {
-	render: 'html',
-}
+	render: "html",
+	replaceOnRender: false,
+};
 
 export default class MetadataLinks extends Plugin {
 	settings: MetadataLinksSettings;
 
 	async onload() {
 		await this.loadSettings();
-		this.settings
+		this.settings;
 		// This creates an icon in the left ribbon.
-		this.addRibbonIcon('dice', 'Metadata links', (evt: MouseEvent) => {
-
-			new Notice('This is a notice!');
-			const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		this.addRibbonIcon("link", "Get Metadata Links", (evt: MouseEvent) => {
+			const markdownView =
+				this.app.workspace.getActiveViewOfType(MarkdownView);
 
 			if (markdownView) {
 				const editor = markdownView.editor;
@@ -28,87 +46,92 @@ export default class MetadataLinks extends Plugin {
 			}
 		});
 
+		this.addRibbonIcon(
+			"unlink",
+			"Undo Metadata links",
+			(evt: MouseEvent) => {
+				const markdownView =
+					this.app.workspace.getActiveViewOfType(MarkdownView);
+
+				if (markdownView) {
+					const editor = markdownView.editor;
+					this.unMapUrls(editor);
+				}
+			}
+		);
 
 		this.addCommand({
-			id: 'sample-editor-command',
-			name: 'Sample editor command',
-			editorCallback: (editor: Editor, view: MarkdownView) => {
+			id: "metadata-links-convert",
+			name: "Convert selection",
+			editorCallback: (editor: Editor) => {
 				this.mapUrls(editor, this.settings);
-			}
+			},
+		});
+
+		this.addCommand({
+			id: "metadata-links-undo",
+			name: "Undo selection",
+			editorCallback: (editor: Editor) => {
+				this.unMapUrls(editor);
+			},
 		});
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new MetadataLinksSettingTab(this.app, this));
 	}
 
-	onunload() {
-		console.log("unloading plugin");
+	unMapUrls(editor: Editor): void {
+		const text = isTextSelection(editor);
+		if (!text) {
+			new Notice("Select almost a metadata link to convert");
+			return;
+		}
+
+		if (text.includes("[")) {
+			undoMarkdown(text, editor);
+		}
+
+		if (text.includes("<a") && text.includes("href")) {
+			undoHtml(text, editor);
+		}
+
+		new Notice("Converted metadata links to URLs");
 	}
 
-	isValidURL(url: string): boolean {
-		const urlRegex = /^(https?:\/\/)?([a-zA-Z\d-]+\.)+[a-zA-Z]{2,6}(\/[\w .-]*)*(\?[\w=&%.-]*)?(#[\w-]*)?$/;
-		return urlRegex.test(url);
-	}
-
-	getUrls(text: string): string[] {
-		const urls = text.match(/(https?:\/\/[^\s]+)/g) || [];
-		return urls.filter(url => this.isValidURL(url));
-	}
-
-
-
-	async mapUrls(editor: Editor, { render }: MetadataLinksSettings): Promise<void> {
-		const text = editor.somethingSelected()
-			? editor.getSelection().trim()
-			: false;
-
-		if (text) {
-			const urls = this.getUrls(text)
-			try {
-				const results = await Promise.allSettled(urls.map(url => requestUrl(url).then(({ text }) => ({ html: text, url })))).then(results => results.map(result => result.status === 'fulfilled' ? result.value : result.reason));
-				const data = await Promise.allSettled(results.map(({ html, url }) => metadata({ html, url }).then(({ title, description, icon, image, url }) => ({ title, description, icon, image, url })))).then(results => results.map(result => result.status === 'fulfilled' ? result.value : result.reason));
-				new Notice(`Found ${data.length} metadata links`);
-				const previousSelection = text + "\n\n";
-				const plain = data.map(({ title, description, url }) => `- [${title}](${url}): ${description}`).join("\n\n");
-				const html = data
-					.map(
-						({
-							title,
-							description,
-							image,
-							url,
-						}) => `<div style="position: relative;"><a href="${url}" target="_blank" style="border: 1px solid var(--background-modifier-border); margin: 20px 0; border-radius: 3px; width: 100%; display: flex; text-decoration: none !important; background-color: var(--background-primary);"><div style="height: 100px; width: 35%; min-width: 120px; overflow: hidden; border-right: 1px solid var(--background-modifier-border);"><div style="background-image: url(${image}); background-position: center center; background-size: cover; background-repeat: no-repeat; padding-bottom: 100px; background-color: var(--background-secondary);"></div></div><div style="padding: 8px; width: 75%; overflow: hidden;"><h5 style="font-family: sans-serif; font-size: 1.125rem; margin: 0 0 4px 0; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; color: var(--text-normal);">${(
-							title || ""
-						)
-							.replace(/\s{3,}/g, " ")
-							.trim()}</h5><p style="font-family: sans-serif; font-size: 1rem; margin: 0; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${(
-							description || ""
-						)
-							.replace(/\s{3,}/g, " ")
-							.trim()}</p><p style="font-family: sans-serif; font-size: 1rem; margin: 0; color: var(--text-faint); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;">${url}</p></div></a></div>
-`
-					)
-					.join("\n\n");
-				editor.replaceSelection(previousSelection + (render === 'html' ? html : plain) + "\n\n");
-				new Notice("Converted URLs to metadata links");
-			} catch (error) {
-				new Notice("Error converting URLs to metadata links");
-			}
-
-		} else {
+	async mapUrls(editor: Editor, settings: MetadataLinksSettings) {
+		const text = isTextSelection(editor);
+		if (!text) {
 			new Notice("Select almost a URL to convert");
+			return;
+		}
+
+		try {
+			const urls = getUrls(text);
+			const data = await getMetadataUrls(urls);
+			new Notice(`Found ${data.length} metadata links`);
+			const markdown = generateMarkDown(data);
+			const html = generateHtml(data);
+			const previous = settings.replaceOnRender ? "" : text + "\n\n";
+			const content = settings.render === "html" ? html : markdown;
+			editor.replaceSelection(previous.trim() + content.join("\n"));
+			new Notice("Converted URLs to metadata links");
+		} catch (error) {
+			new Notice("Error converting URLs to metadata links");
 		}
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		this.settings = Object.assign(
+			{},
+			DEFAULT_SETTINGS,
+			await this.loadData()
+		);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
 }
-
 
 class MetadataLinksSettingTab extends PluginSettingTab {
 	plugin: MetadataLinks;
@@ -120,19 +143,32 @@ class MetadataLinksSettingTab extends PluginSettingTab {
 
 	display(): void {
 		const { containerEl } = this;
-
 		containerEl.empty();
+		new Setting(containerEl)
+			.setName("Choose how to render metadata links")
+			.setDesc("By default, metadata links are rendered as HTML")
+			.addText((text) =>
+				text
+					.setPlaceholder("html || markdown")
+					.setValue(this.plugin.settings.render)
+					.onChange(async (value) => {
+						this.plugin.settings.render = value;
+						await this.plugin.saveSettings();
+					})
+			);
 
 		new Setting(containerEl)
-			.setName('Choose how to render metadata links')
-			.setDesc('By default, metadata links are rendered as HTML')
-			.addText(text => text
-				.setPlaceholder('html || markdown')
-				.setValue(this.plugin.settings.render)
-				.onChange(async (value) => {
-					this.plugin.settings.render = value;
-					await this.plugin.saveSettings();
-				}));
-
+			.setName("Replace on render")
+			.setDesc(
+				"By default, metadata links are appended not replacing the current selection"
+			)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.replaceOnRender)
+					.onChange(async (value) => {
+						this.plugin.settings.replaceOnRender = value;
+						await this.plugin.saveSettings();
+					})
+			);
 	}
 }
