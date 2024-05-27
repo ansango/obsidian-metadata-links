@@ -113,7 +113,7 @@ export default class MetadataLinks extends Plugin {
 			const html = generateHtml(data);
 			const previous = settings.replaceOnRender ? "" : text + "\n\n";
 			const content = settings.render === "html" ? html : markdown;
-			editor.replaceSelection(previous.trim() + content.join("\n"));
+			editor.replaceSelection(previous + content.join("\n"));
 			new Notice("Converted URLs to metadata links");
 		} catch (error) {
 			new Notice("Error converting URLs to metadata links");
