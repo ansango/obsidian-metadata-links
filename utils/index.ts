@@ -107,7 +107,7 @@ export const getUrls = (text: string): string[] => {
  * @param editor - The editor instance where the replacement will be made.
  */
 export const undoMarkdown = (text: string, editor: Editor) => {
-	const regex = /\[.*?\]\((https?:\/\/[^\s\)]+)\)/g;
+	const regex = /\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
 	const urls = [...text.matchAll(regex)].map((match) => match[1]) || [];
 	editor.replaceSelection(urls.join("\n"));
 };
