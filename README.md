@@ -13,7 +13,7 @@
 1. **Clone the Repository**: 
    Clone this repository into the `plugins` folder of your Obsidian vault.
    ```sh
-   git clone https://github.com/your-username/obsidian-metadata-links.git
+   git clone https://github.com/ansango/obsidian-metadata-links.git
    ```
 
 2. **Build the Plugin**: 
