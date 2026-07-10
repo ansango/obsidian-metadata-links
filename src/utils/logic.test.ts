@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
-	extractHtmlUrls,
-	extractMarkdownUrls,
-	generateHtml,
-	generateMarkDown,
+	extractMetadataBlockUrls,
 	getUrls,
 	isValidURL,
 	parseMetadata,
+	parseMetadataBlockBody,
+	serializeMetadataBlockBody,
+	serializeMetadataBlocks,
 } from "./logic";
 
 describe("isValidURL", () => {
@@ -28,42 +28,6 @@ describe("getUrls", () => {
 
 	test("returns an empty array when there are no URLs", () => {
 		expect(getUrls("no links here")).toEqual([]);
-	});
-});
-
-describe("generateMarkDown", () => {
-	test("formats metadata as a markdown list item", () => {
-		const result = generateMarkDown([
-			{ title: "Title", description: "Desc", url: "https://example.com" },
-		]);
-		expect(result).toEqual(["- [Title](https://example.com): Desc"]);
-	});
-});
-
-describe("generateHtml", () => {
-	test("includes the url, title and description in the generated markup", () => {
-		const [html] = generateHtml([
-			{ title: "Title", description: "Desc", url: "https://example.com", image: "img.png" },
-		]);
-		expect(html).toContain("https://example.com");
-		expect(html).toContain("Title");
-		expect(html).toContain("Desc");
-	});
-});
-
-describe("extractMarkdownUrls", () => {
-	test("extracts the URL from a markdown link", () => {
-		expect(extractMarkdownUrls("- [Title](https://example.com): Desc")).toEqual([
-			"https://example.com",
-		]);
-	});
-});
-
-describe("extractHtmlUrls", () => {
-	test("extracts the URL from an href attribute", () => {
-		expect(extractHtmlUrls('<a href="https://example.com">link</a>')).toEqual([
-			"https://example.com",
-		]);
 	});
 });
 
@@ -104,5 +68,76 @@ describe("parseMetadata", () => {
 		expect(result.description).toBeUndefined();
 		expect(result.image).toBeUndefined();
 		expect(result.icon).toBeUndefined();
+	});
+});
+
+describe("serializeMetadataBlockBody / parseMetadataBlockBody", () => {
+	test("round-trips a metadata entry", () => {
+		const entry = {
+			template: "card",
+			title: "My Site",
+			description: "This is a description",
+			image: "https://example.com/img.png",
+			icon: "https://example.com/favicon.ico",
+			url: "https://example.com",
+		};
+
+		const body = serializeMetadataBlockBody(entry);
+		expect(body).toContain("template: card");
+		expect(body).toContain("url: https://example.com");
+
+		const parsed = parseMetadataBlockBody(body);
+		expect(parsed).toEqual(entry);
+	});
+
+	test("omits empty fields when serializing", () => {
+		const body = serializeMetadataBlockBody({ template: "compact", url: "https://example.com" });
+		expect(body).not.toContain("description");
+		expect(body).not.toContain("image");
+	});
+
+	test("ignores lines without a colon when parsing", () => {
+		const parsed = parseMetadataBlockBody("title: Hello\nnot a valid line\nurl: https://example.com");
+		expect(parsed.title).toBe("Hello");
+		expect(parsed.url).toBe("https://example.com");
+	});
+});
+
+describe("serializeMetadataBlocks", () => {
+	test("wraps each entry in its own metadata-links fenced block", () => {
+		const result = serializeMetadataBlocks([
+			{ template: "card", title: "One", url: "https://one.com" },
+			{ template: "compact", title: "Two", url: "https://two.com" },
+		]);
+
+		expect(result).toContain("```metadata-links\ntemplate: card");
+		expect(result).toContain("```metadata-links\ntemplate: compact");
+		expect(result.match(/```metadata-links/g)?.length).toBe(2);
+	});
+});
+
+describe("extractMetadataBlockUrls", () => {
+	test("extracts the url field from every metadata-links block in the text", () => {
+		const text = [
+			"```metadata-links",
+			"template: card",
+			"title: One",
+			"url: https://one.com",
+			"```",
+			"",
+			"```metadata-links",
+			"template: compact",
+			"url: https://two.com",
+			"```",
+		].join("\n");
+
+		expect(extractMetadataBlockUrls(text)).toEqual([
+			"https://one.com",
+			"https://two.com",
+		]);
+	});
+
+	test("returns an empty array when there are no metadata-links blocks", () => {
+		expect(extractMetadataBlockUrls("just some text")).toEqual([]);
 	});
 });

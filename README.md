@@ -1,42 +1,60 @@
 # Obsidian Metadata Links
 
-**Obsidian Metadata Links** is a plugin for Obsidian that enhances your note-taking experience by allowing you to select links and view their metadata. The metadata is displayed in a well-formatted manner, and you can also deselect links as needed.
+**Obsidian Metadata Links** is a plugin for Obsidian that fetches metadata (title, description, image, icon) for the URLs in your selection and stores it as a `metadata-links` code block, which is then rendered as a card in Reading view and Live Preview.
 
 ## Features
 
-- **Select Links**: Easily select links within your Obsidian notes.
-- **View Metadata**: Fetch and display metadata associated with the selected links in a formatted manner.
-- **Deselect Links**: Option to deselect links and manage the selected items.
+- **Convert selection**: select one or more URLs and convert them into `metadata-links` code blocks holding their fetched metadata.
+- **Multiple templates**: choose how each link is rendered — currently `Card` (image, title, description, URL) and `Compact` (single-line title linking to the URL). Pick the template per-conversion from the editor context menu, or set a default used by the command palette.
+- **Undo**: convert `metadata-links` code blocks in a selection back into plain URLs.
+- **Settings**: choose the default template, whether conversions replace or append to the selection, and see the list of available templates.
+
+### The `metadata-links` code block
+
+Converting a URL inserts a block like this into your note:
+
+````
+```metadata-links
+template: card
+title: Example Site
+description: This is a description
+image: https://example.com/img.png
+icon: https://example.com/favicon.ico
+url: https://example.com
+```
+````
+
+The plugin renders this block into the corresponding template. Editing the fields by hand and switching the `template` value re-renders it with a different template.
 
 ## Installation
 
-1. **Clone the Repository**: 
+1. **Clone the Repository**:
    Clone this repository into the `plugins` folder of your Obsidian vault.
    ```sh
    git clone https://github.com/ansango/obsidian-metadata-links.git
    ```
 
-2. **Build the Plugin**: 
+2. **Build the Plugin**:
    Navigate to the cloned repository directory and run the build command.
    ```sh
    cd obsidian-metadata-links
-   npm install
-   npm run build
+   bun install
+   bun run build
    ```
 
-3. **Enable the Plugin**: 
+3. **Enable the Plugin**:
    Open Obsidian and go to `Settings` > `Community plugins`. You should see "Metadata Links" in the list. Enable it to start using the plugin.
 
 ## Usage
 
-1. **Selecting Links**: 
-   Highlight the links within your note that you want to get metadata for. The plugin will automatically fetch and display the relevant information.
+1. **Convert a selection**:
+   Highlight one or more URLs in a note, right-click and choose "Convert selection to metadata link" with the template you want, or run "Convert selection (Card/Compact)" from the command palette.
 
-2. **Viewing Metadata**: 
-   Metadata for selected links will be shown in a well-structured format, allowing for easy review and access.
+2. **Undo a conversion**:
+   Select the `metadata-links` code block(s) you want to revert, then use "Undo metadata links in selection" from the context menu or the "Undo selection" command.
 
-3. **Deselecting Links**: 
-   To deselect a link, simply click on it again, or use the deselection option provided by the plugin.
+3. **Choose a template per link**:
+   If a page doesn't expose much metadata (no image/description), pick the `Compact` template instead of `Card` from the context menu.
 
 ## Contributing
 

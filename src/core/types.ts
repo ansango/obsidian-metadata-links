@@ -1,9 +1,11 @@
+import { DEFAULT_TEMPLATE_ID } from "../templates";
+
 export interface MetadataLinksSettings {
-	render: string;
+	defaultTemplate: string;
 	replaceOnRender: boolean;
 }
 
 export const DEFAULT_SETTINGS: MetadataLinksSettings = {
-	render: "html",
+	defaultTemplate: DEFAULT_TEMPLATE_ID,
 	replaceOnRender: false,
 };

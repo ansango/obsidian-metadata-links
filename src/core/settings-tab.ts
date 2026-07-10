@@ -1,4 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
+import { TEMPLATES } from "../templates";
 import type MetadataLinksPlugin from "./main";
 
 export class MetadataLinksSettingTab extends PluginSettingTab {
@@ -14,17 +15,17 @@ export class MetadataLinksSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		new Setting(containerEl)
-			.setName("Choose how to render metadata links")
-			.setDesc("By default, metadata links are rendered as HTML")
-			.addText((text) =>
-				text
-					.setPlaceholder("html || markdown")
-					.setValue(this.plugin.settings.render)
-					.onChange(async (value) => {
-						this.plugin.settings.render = value;
-						await this.plugin.saveSettings();
-					})
-			);
+			.setName("Default template")
+			.setDesc("Template used when converting a selection from the command palette.")
+			.addDropdown((dropdown) => {
+				for (const template of TEMPLATES) {
+					dropdown.addOption(template.id, template.label);
+				}
+				dropdown.setValue(this.plugin.settings.defaultTemplate).onChange(async (value) => {
+					this.plugin.settings.defaultTemplate = value;
+					await this.plugin.saveSettings();
+				});
+			});
 
 		new Setting(containerEl)
 			.setName("Replace on render")
@@ -39,5 +40,13 @@ export class MetadataLinksSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		containerEl.createEl("h3", { text: "Available templates" });
+		const list = containerEl.createEl("ul", { cls: "metadata-links-settings-templates" });
+		for (const template of TEMPLATES) {
+			const item = list.createEl("li");
+			item.createEl("strong", { text: template.label });
+			item.createSpan({ text: ` — ${template.description}` });
+		}
 	}
 }

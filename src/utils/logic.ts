@@ -86,35 +86,84 @@ export const parseMetadata = (html: string, url: string): UrlMetadata => {
 	};
 };
 
-/**
- * Generates HTML markup for a list of metadata items.
- */
-export const generateHtml = (data: UrlMetadata[]): string[] =>
-	data.map(({ title, description, image, url }) => {
-		const cleanTitle = (title || "").replace(/\s{3,}/g, " ").trim();
-		const cleanDescription = (description || "").replace(/\s{3,}/g, " ").trim();
-		return `<div class="obsidian-meta-links"><a href="${url}" target="_blank" class="obsidian-meta-links-card"><div class="obsidian-meta-links-image" style="background-image: url(${image});"></div><div class="obsidian-meta-links-body"><h5 class="obsidian-meta-links-title">${cleanTitle}</h5><p class="obsidian-meta-links-description">${cleanDescription}</p><p class="obsidian-meta-links-url">${url}</p></div></a></div>
-`;
-	});
+export interface MetadataBlock extends UrlMetadata {
+	template: string;
+}
+
+export const METADATA_BLOCK_LANGUAGE = "metadata-links";
+
+const BLOCK_FIELDS: (keyof MetadataBlock)[] = [
+	"template",
+	"title",
+	"description",
+	"image",
+	"icon",
+	"url",
+];
+
+const escapeFieldValue = (value: string): string => value.replace(/\r?\n/g, " ").trim();
 
 /**
- * Generates Markdown links based on the provided metadata.
+ * Serializes a single metadata entry into the body of a `metadata-links` code block
+ * (without the surrounding fences).
  */
-export const generateMarkDown = (data: UrlMetadata[]): string[] =>
-	data.map(({ title, description, url }) => `- [${title}](${url}): ${description}`);
+export const serializeMetadataBlockBody = (data: MetadataBlock): string =>
+	BLOCK_FIELDS.filter((field) => data[field])
+		.map((field) => `${field}: ${escapeFieldValue(String(data[field]))}`)
+		.join("\n");
 
 /**
- * Extracts the URLs pointed to by Markdown links in the given text.
+ * Serializes a list of metadata entries into one fenced `metadata-links` code block per entry.
  */
-export const extractMarkdownUrls = (text: string): string[] => {
-	const regex = /\[.*?\]\((https?:\/\/[^\s)]+)\)/g;
-	return [...text.matchAll(regex)].map((match) => match[1]);
+export const serializeMetadataBlocks = (data: MetadataBlock[]): string =>
+	data
+		.map(
+			(entry) =>
+				`\`\`\`${METADATA_BLOCK_LANGUAGE}\n${serializeMetadataBlockBody(entry)}\n\`\`\``
+		)
+		.join("\n\n");
+
+/**
+ * Parses the body of a `metadata-links` code block (as received by
+ * `registerMarkdownCodeBlockProcessor`, i.e. without the fences) into structured metadata.
+ */
+export const parseMetadataBlockBody = (source: string): MetadataBlock => {
+	const result: Record<string, string> = {};
+
+	for (const line of source.split("\n")) {
+		const separatorIndex = line.indexOf(":");
+		if (separatorIndex === -1) continue;
+
+		const key = line.slice(0, separatorIndex).trim();
+		const value = line.slice(separatorIndex + 1).trim();
+		if (key && value) result[key] = value;
+	}
+
+	return {
+		template: result.template || "",
+		title: result.title,
+		description: result.description,
+		image: result.image,
+		icon: result.icon,
+		url: result.url,
+	};
 };
 
 /**
- * Extracts the URLs referenced by `href` attributes in the given HTML text.
+ * Extracts the URLs referenced by `url:` fields inside every `metadata-links`
+ * code block found in the given text.
  */
-export const extractHtmlUrls = (text: string): string[] => {
-	const regex = /href="(https?:\/\/[^"]+)/g;
-	return [...text.matchAll(regex)].map((match) => match[1]);
+export const extractMetadataBlockUrls = (text: string): string[] => {
+	const blockRegex = new RegExp(
+		"```" + METADATA_BLOCK_LANGUAGE + "\\n([\\s\\S]*?)```",
+		"g"
+	);
+	const urls: string[] = [];
+
+	for (const match of text.matchAll(blockRegex)) {
+		const { url } = parseMetadataBlockBody(match[1]);
+		if (url) urls.push(url);
+	}
+
+	return urls;
 };

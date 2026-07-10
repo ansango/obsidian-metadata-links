@@ -1,14 +1,15 @@
 import { Editor, MarkdownView, Notice, Plugin } from "obsidian";
-import {
-	extractHtmlUrls,
-	extractMarkdownUrls,
-	generateHtml,
-	generateMarkDown,
-	getUrls,
-} from "../utils/logic";
+import { registerMetadataLinksRenderer } from "./renderer";
 import { getMetadataUrls } from "./network";
 import { MetadataLinksSettingTab } from "./settings-tab";
+import { TEMPLATES } from "../templates";
 import { DEFAULT_SETTINGS, type MetadataLinksSettings } from "./types";
+import {
+	extractMetadataBlockUrls,
+	getUrls,
+	serializeMetadataBlocks,
+	type MetadataBlock,
+} from "../utils/logic";
 
 const isTextSelection = (editor: Editor) =>
 	editor.somethingSelected() ? editor.getSelection() : false;
@@ -19,11 +20,12 @@ export default class MetadataLinksPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 		this.addSettingTab(new MetadataLinksSettingTab(this.app, this));
+		registerMetadataLinksRenderer(this);
 
 		this.addRibbonIcon("link", "Get Metadata Links", () => {
 			const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (markdownView) {
-				void this.mapUrls(markdownView.editor, this.settings);
+				void this.mapUrls(markdownView.editor, this.settings.defaultTemplate);
 			}
 		});
 
@@ -34,13 +36,15 @@ export default class MetadataLinksPlugin extends Plugin {
 			}
 		});
 
-		this.addCommand({
-			id: "convert-selection",
-			name: "Convert selection",
-			editorCallback: (editor: Editor) => {
-				void this.mapUrls(editor, this.settings);
-			},
-		});
+		for (const template of TEMPLATES) {
+			this.addCommand({
+				id: `convert-selection-${template.id}`,
+				name: `Convert selection (${template.label})`,
+				editorCallback: (editor: Editor) => {
+					void this.mapUrls(editor, template.id);
+				},
+			});
+		}
 
 		this.addCommand({
 			id: "undo-selection",
@@ -54,14 +58,16 @@ export default class MetadataLinksPlugin extends Plugin {
 			this.app.workspace.on("editor-menu", (menu, editor) => {
 				if (!isTextSelection(editor)) return;
 
-				menu.addItem((item) => {
-					item
-						.setTitle("Convert selection to metadata links")
-						.setIcon("link")
-						.onClick(() => {
-							void this.mapUrls(editor, this.settings);
-						});
-				});
+				for (const template of TEMPLATES) {
+					menu.addItem((item) => {
+						item
+							.setTitle(`Convert selection to metadata link (${template.label})`)
+							.setIcon("link")
+							.onClick(() => {
+								void this.mapUrls(editor, template.id);
+							});
+					});
+				}
 
 				menu.addItem((item) => {
 					item
@@ -82,18 +88,17 @@ export default class MetadataLinksPlugin extends Plugin {
 			return;
 		}
 
-		if (text.includes("[")) {
-			editor.replaceSelection(extractMarkdownUrls(text).join("\n"));
+		const urls = extractMetadataBlockUrls(text);
+		if (urls.length === 0) {
+			new Notice("No metadata links found in selection");
+			return;
 		}
 
-		if (text.includes("<a") && text.includes("href")) {
-			editor.replaceSelection(extractHtmlUrls(text).join("\n"));
-		}
-
+		editor.replaceSelection(urls.join("\n"));
 		new Notice("Converted metadata links to URLs");
 	}
 
-	async mapUrls(editor: Editor, settings: MetadataLinksSettings) {
+	async mapUrls(editor: Editor, templateId: string) {
 		const text = isTextSelection(editor);
 		if (!text) {
 			new Notice("Select almost a URL to convert");
@@ -104,11 +109,14 @@ export default class MetadataLinksPlugin extends Plugin {
 			const urls = getUrls(text);
 			const data = await getMetadataUrls(urls);
 			new Notice(`Found ${data.length} metadata links`);
-			const markdown = generateMarkDown(data);
-			const html = generateHtml(data);
-			const previous = settings.replaceOnRender ? "" : text + "\n\n";
-			const content = settings.render === "html" ? html : markdown;
-			editor.replaceSelection(previous + content.join("\n"));
+
+			const blocks: MetadataBlock[] = data.map((entry) => ({
+				...entry,
+				template: templateId,
+			}));
+			const content = serializeMetadataBlocks(blocks);
+			const previous = this.settings.replaceOnRender ? "" : text + "\n\n";
+			editor.replaceSelection(previous + content);
 			new Notice("Converted URLs to metadata links");
 		} catch {
 			new Notice("Error converting URLs to metadata links");
