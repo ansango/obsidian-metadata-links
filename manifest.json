@@ -4,7 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "1.4.0",
 	"description": "Add metadata blocks.",
-	"author": "Anibal Santos",
-	"authorUrl": "https://ansango.com",
+	"author": "ansango",
+	"authorUrl": "",
 	"isDesktopOnly": false
 }
