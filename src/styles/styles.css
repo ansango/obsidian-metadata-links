@@ -13,16 +13,17 @@
 }
 
 .metadata-links-card-image {
+	flex-shrink: 0;
 	width: 35%;
 	min-width: 120px;
-	height: 100%;
+	min-height: 120px;
+	align-self: stretch;
 	overflow: hidden;
 	border-right: 1px solid var(--background-modifier-border);
 	background-position: center center;
 	background-size: cover;
 	background-repeat: no-repeat;
 	background-color: var(--background-secondary);
-	padding-bottom: 120px;
 }
 
 .metadata-links-card-body {

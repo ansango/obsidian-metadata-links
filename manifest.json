@@ -1,7 +1,7 @@
 {
 	"id": "metadata-links",
 	"name": "Metadata Links",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"minAppVersion": "1.4.0",
 	"description": "Add metadata blocks.",
 	"author": "ansango",
