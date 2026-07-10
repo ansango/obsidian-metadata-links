@@ -2,14 +2,14 @@
 	position: relative;
 }
 
-.obsidian-meta-links-card {
+.obsidian-meta-links .obsidian-meta-links-card {
 	display: flex;
 	width: 100%;
 	margin: 20px 0;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 3px;
 	background-color: var(--background-primary);
-	text-decoration: none !important;
+	text-decoration: none;
 }
 
 .obsidian-meta-links-image {

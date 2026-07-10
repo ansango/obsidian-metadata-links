@@ -24,6 +24,68 @@ export const getUrls = (text: string): string[] => {
 	return urls.filter((url) => isValidURL(url));
 };
 
+const decodeHtmlEntities = (value: string): string =>
+	value
+		.replace(/&amp;/g, "&")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"')
+		.replace(/&#0?39;/g, "'");
+
+const matchMetaContent = (html: string, patterns: RegExp[]): string | undefined => {
+	for (const pattern of patterns) {
+		const match = html.match(pattern);
+		if (match?.[1]) return decodeHtmlEntities(match[1].trim());
+	}
+	return undefined;
+};
+
+const resolveUrl = (value: string | undefined, baseUrl: string): string | undefined => {
+	if (!value) return undefined;
+	try {
+		return new URL(value, baseUrl).toString();
+	} catch {
+		return undefined;
+	}
+};
+
+/**
+ * Extracts basic page metadata (title, description, icon, image) from raw HTML
+ * using lightweight regex matching, without relying on a DOM/HTML parser.
+ */
+export const parseMetadata = (html: string, url: string): UrlMetadata => {
+	const title =
+		matchMetaContent(html, [
+			/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']*)["']/i,
+			/<meta[^>]+content=["']([^"']*)["'][^>]+property=["']og:title["']/i,
+		]) ?? matchMetaContent(html, [/<title[^>]*>([^<]*)<\/title>/i]);
+
+	const description = matchMetaContent(html, [
+		/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']*)["']/i,
+		/<meta[^>]+content=["']([^"']*)["'][^>]+property=["']og:description["']/i,
+		/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["']/i,
+		/<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["']/i,
+	]);
+
+	const image = matchMetaContent(html, [
+		/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']*)["']/i,
+		/<meta[^>]+content=["']([^"']*)["'][^>]+property=["']og:image["']/i,
+	]);
+
+	const icon = matchMetaContent(html, [
+		/<link[^>]+rel=["'](?:shortcut icon|icon|apple-touch-icon)["'][^>]+href=["']([^"']*)["']/i,
+		/<link[^>]+href=["']([^"']*)["'][^>]+rel=["'](?:shortcut icon|icon|apple-touch-icon)["']/i,
+	]);
+
+	return {
+		title,
+		description,
+		image: resolveUrl(image, url),
+		icon: resolveUrl(icon, url),
+		url,
+	};
+};
+
 /**
  * Generates HTML markup for a list of metadata items.
  */

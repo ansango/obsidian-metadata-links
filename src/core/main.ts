@@ -23,7 +23,7 @@ export default class MetadataLinksPlugin extends Plugin {
 		this.addRibbonIcon("link", "Get Metadata Links", () => {
 			const markdownView = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (markdownView) {
-				this.mapUrls(markdownView.editor, this.settings);
+				void this.mapUrls(markdownView.editor, this.settings);
 			}
 		});
 
@@ -35,7 +35,7 @@ export default class MetadataLinksPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: "metadata-links-convert",
+			id: "convert-selection",
 			name: "Convert selection",
 			editorCallback: (editor: Editor) => {
 				void this.mapUrls(editor, this.settings);
@@ -43,7 +43,7 @@ export default class MetadataLinksPlugin extends Plugin {
 		});
 
 		this.addCommand({
-			id: "metadata-links-undo",
+			id: "undo-selection",
 			name: "Undo selection",
 			editorCallback: (editor: Editor) => {
 				this.unMapUrls(editor);
@@ -110,13 +110,14 @@ export default class MetadataLinksPlugin extends Plugin {
 			const content = settings.render === "html" ? html : markdown;
 			editor.replaceSelection(previous + content.join("\n"));
 			new Notice("Converted URLs to metadata links");
-		} catch (error) {
+		} catch {
 			new Notice("Error converting URLs to metadata links");
 		}
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const loaded = (await this.loadData()) as Partial<MetadataLinksSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loaded);
 	}
 
 	async saveSettings() {

@@ -6,6 +6,7 @@ import {
 	generateMarkDown,
 	getUrls,
 	isValidURL,
+	parseMetadata,
 } from "./logic";
 
 describe("isValidURL", () => {
@@ -63,5 +64,45 @@ describe("extractHtmlUrls", () => {
 		expect(extractHtmlUrls('<a href="https://example.com">link</a>')).toEqual([
 			"https://example.com",
 		]);
+	});
+});
+
+describe("parseMetadata", () => {
+	test("extracts title, description and image from Open Graph tags", () => {
+		const html = `
+			<html><head>
+				<title>Fallback Title</title>
+				<meta property="og:title" content="OG Title" />
+				<meta property="og:description" content="OG Description" />
+				<meta property="og:image" content="/img.png" />
+				<link rel="icon" href="/favicon.ico" />
+			</head></html>
+		`;
+		const result = parseMetadata(html, "https://example.com/page");
+		expect(result.title).toBe("OG Title");
+		expect(result.description).toBe("OG Description");
+		expect(result.image).toBe("https://example.com/img.png");
+		expect(result.icon).toBe("https://example.com/favicon.ico");
+		expect(result.url).toBe("https://example.com/page");
+	});
+
+	test("falls back to <title> and meta description when Open Graph tags are missing", () => {
+		const html = `
+			<html><head>
+				<title>Plain Title</title>
+				<meta name="description" content="Plain Description" />
+			</head></html>
+		`;
+		const result = parseMetadata(html, "https://example.com");
+		expect(result.title).toBe("Plain Title");
+		expect(result.description).toBe("Plain Description");
+	});
+
+	test("returns undefined fields when nothing matches", () => {
+		const result = parseMetadata("<html><head></head></html>", "https://example.com");
+		expect(result.title).toBeUndefined();
+		expect(result.description).toBeUndefined();
+		expect(result.image).toBeUndefined();
+		expect(result.icon).toBeUndefined();
 	});
 });
