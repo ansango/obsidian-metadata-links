@@ -5,7 +5,7 @@ export const cardTemplate: CardTemplate = {
 	label: "Card",
 	description: "Full card with image, title, description and URL.",
 	render(data) {
-		const container = document.createElement("div");
+		const container = activeDocument.createElement("div");
 		container.className = "metadata-links";
 
 		const link = container.createEl("a", {

@@ -5,7 +5,7 @@ export const compactTemplate: CardTemplate = {
 	label: "Compact",
 	description: "Single-line title linking to the URL, no image or description.",
 	render(data) {
-		const container = document.createElement("div");
+		const container = activeDocument.createElement("div");
 		container.className = "metadata-links";
 
 		const link = container.createEl("a", {
