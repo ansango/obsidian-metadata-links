@@ -1,0 +1,9 @@
+node_modules/
+*.map
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+*.swp
+*~
+data.json

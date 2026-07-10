@@ -1,0 +1,23 @@
+{
+	"name": "metadata-links",
+	"version": "1.0.0",
+	"description": "This plugin allows you to create links to metadata in your notes.",
+	"main": "main.js",
+	"scripts": {
+		"dev": "bun esbuild.config.mjs",
+		"build": "bunx tsc -noEmit -skipLibCheck && bun esbuild.config.mjs production",
+		"test": "bun test"
+	},
+	"license": "MIT",
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/node": "^20.0.0",
+		"esbuild": "0.19.11",
+		"obsidian": "latest",
+		"tslib": "2.4.0",
+		"typescript": "5.3.3"
+	},
+	"dependencies": {
+		"metadata-scraper": "^0.2.61"
+	}
+}
