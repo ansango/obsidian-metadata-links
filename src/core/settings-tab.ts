@@ -41,7 +41,8 @@ export class MetadataLinksSettingTab extends PluginSettingTab {
 					})
 			);
 
-		containerEl.createEl("h3", { text: "Available templates" });
+		new Setting(containerEl).setName("Available templates").setHeading();
+
 		const list = containerEl.createEl("ul", { cls: "metadata-links-settings-templates" });
 		for (const template of TEMPLATES) {
 			const item = list.createEl("li");
